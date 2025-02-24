@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y wget less && \
     chmod +x /usr/local/bin/wp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY ./source/themes/ /var/www/html/wp-content/themes/
+COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
