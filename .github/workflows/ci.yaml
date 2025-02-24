@@ -1,0 +1,84 @@
+name: Build and Deploy WordPress Docker Image
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ vars.DOCKER_USERNAME }}/wordpress
+        tags: |
+          type=semver,pattern={{version}}
+          type=sha,format=short
+
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Slack Notification
+      if: always()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: "Image build result for ${{ github.repository }}"
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_MESSAGE: |
+          Result is ${{ job.status }}
+          Commit message: ${{ github.event.head_commit.message }}
+
+    - name: Checkout Helm repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ vars.USER_GITHUB }}/${{ vars.HELM_REPO}}
+        token: ${{ secrets.TOKEN_GITHUB }}
+        path: helm-repo
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4.3.0
+
+    - name: Update tag in Helm values and Chart.yaml
+      run: |
+        tag="${{ steps.meta.outputs.tags }}"
+        version=$(echo $tag | sed 's/.*://')
+
+        chart_version=$(grep '^version:' helm-repo/helm-sources/wordpress/Chart.yaml | awk '{print $2}')
+        new_chart_version=$(echo "$chart_version" | awk -F. '{print $1"."$2"."$3+1}')
+
+        sed -i "s/^appVersion: .*/appVersion: \"${version}\"/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i "s/^version: .*/version: $new_chart_version/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i 's|tag: ".*"|tag: "${version}"|' helm-repo/helm-sources/wordpress/values.yaml
+
+    - name: Package a new version app and Update the index.yaml
+      run: |
+        cd helm-repo
+        helm package helm-sources/wordpress -d helm-releases
+        helm repo index --url "https://fedos1993.github.io/helm-repo-project/" --merge index.yaml . \
+
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add .
+        git commit -m "Update index.yaml with new app version" && git push
+    
+
