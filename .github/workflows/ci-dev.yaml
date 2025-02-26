@@ -80,7 +80,8 @@ jobs:
         sed -i "s/^version: .*/version: ${new_chart_version}/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i 's|tag: ".*"|tag: "${version}"|' helm-repo/helm-sources/wordpress/values.yaml
 
-       # echo "new_chart_version=$new_chart_version" >> $GITHUB_OUTPUT
+        echo "new_chart_version=$new_chart_version" >> $GITHUB_OUTPUT
+        echo "version=$version" >> $GITHUB_ENV
 
     - name: Package a new version app and Update the index.yaml
       run: |
@@ -91,7 +92,7 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git add .
-        git commit -m "Auto-update: Wordpress new version: ${version} (Chart version: ${new_chart_version}"
+        git commit -m "Auto-update: Wordpress new version: $version (Chart version: ${{ steps.version.outputs.new_chart_version }})"
         git push
 
     - name: Slack Notification
