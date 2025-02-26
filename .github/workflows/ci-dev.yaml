@@ -77,20 +77,21 @@ jobs:
         new_chart_version=$(echo "$chart_version" | awk -F. '{print $1"."$2"."$3+1}')
 
         sed -i "s/^appVersion: .*/appVersion: \"${version}\"/" helm-repo/helm-sources/wordpress/Chart.yaml
-        sed -i "s/^version: .*/version: $new_chart_version/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i "s/^version: .*/version: ${new_chart_version}/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i 's|tag: ".*"|tag: "${version}"|' helm-repo/helm-sources/wordpress/values.yaml
+
+        echo "new_chart_version=$new_chart_version" >> $GITHUB_OUTPUT
 
     - name: Package a new version app and Update the index.yaml
       run: |
         cd helm-repo
         helm package helm-sources/wordpress -d helm-releases
         helm repo index --url "${{ vars.URL_HELM_REPO }}" --merge index.yaml .
-        echo $version
 
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git add .
-        git commit -m "Auto-update: Wordpress new version: $version (Chart version: ${{ new_chart_version }}"
+        git commit -m "Auto-update: Wordpress new version: ${version} (Chart version: ${new_chart_version}"
         git push
 
     - name: Slack Notification
@@ -118,13 +119,14 @@ jobs:
     - name: Update ArgoCD application
       run: |
         cd argocd-repo
-        target_version="${{ needs.update-helm.outputs.new_chart_version }}"
+        target_version="${{ needs.update-helm.outputs.chart_version }}"
         sed -i "s|version: .*|version: $target_version|" applications/dev/wordpress-dev.yaml
+        echo "Target versoin ${target_version}"
 
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git add .
-        git commit -m "Auto-update: ArgoCD targets chart version $(echo $target_version)"
+        git commit -m "Auto-update: ArgoCD targets chart version ${target_version}"
         git push
 
     - name: Slack Notification
@@ -136,5 +138,3 @@ jobs:
         SLACK_COLOR: ${{ job.status }}
         SLACK_MESSAGE: |
           ${{ job.status }}
-      
-    
