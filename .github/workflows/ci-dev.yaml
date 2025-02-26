@@ -80,7 +80,7 @@ jobs:
         sed -i "s/^version: .*/version: ${new_chart_version}/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i 's|tag: ".*"|tag: "${version}"|' helm-repo/helm-sources/wordpress/values.yaml
 
-        echo "new_chart_version=$new_chart_version" >> $GITHUB_OUTPUT
+       # echo "new_chart_version=$new_chart_version" >> $GITHUB_OUTPUT
 
     - name: Package a new version app and Update the index.yaml
       run: |
