@@ -120,8 +120,7 @@ jobs:
       run: |
         cd argocd-repo
         target_version="${{ needs.update-helm.outputs.chart_version }}"
-        sed -i "s|version: .*|version: $target_version|" applications/dev/wordpress-dev.yaml
-        echo "Target versoin ${target_version}"
+        sed -E -i "s|^( *targetRevision:).*|\1 $target_version|" applications/dev/wordpress-dev.yaml
 
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
