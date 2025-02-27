@@ -127,7 +127,6 @@ jobs:
         TAG="${{ needs.versioning.outputs.semver_tag }}"
         CLEAN_TAG="${TAG/v/}"
         cd argocd-repo
-        #sed -i "s|version: .*|version: $CLEAN_TAG|" applications/dev/wordpress-dev.yaml
         sed -E -i "s|^( *targetRevision:).*|\1 $CLEAN_TAG|" applications/dev/wordpress-dev.yaml
 
         git config --global user.name "GitHub Actions"
