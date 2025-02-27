@@ -5,6 +5,8 @@ on:
     branches:
       - testing
 
+permissions:
+  contents: write
 env:
   DOCKER_IMAGE: ${{ vars.DOCKER_USERNAME }}/wordpress
 
@@ -19,14 +21,14 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 
+        fetch-depth: 0
 
     - name: Generate SemVer Tag
       id: semver
       uses: mathieudutour/github-tag-action@v6.2
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        prefix: v
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag_prefix: v
 
   build:
     runs-on: ubuntu-latest
@@ -67,7 +69,7 @@ jobs:
   update-helm:
     runs-on: ubuntu-latest
     needs: [versioning, build]
-    
+
     steps:
     - name: Checkout Helm Repo
       uses: actions/checkout@v4
@@ -81,11 +83,11 @@ jobs:
 
     - name: Update Chart Versions
       run: |
-        SEMVER_TAG="${{ needs.versioning.outputs.semver_tag }}"
-        CLEAN_VERSION=${SEMVER_TAG#v}
-        
-        sed -i "s/^version: .*/version: $CLEAN_VERSION/" helm-repo/helm-sources/wordpress/Chart.yaml
-        sed -i "s/^appVersion: .*/appVersion: \"$CLEAN_VERSION\"/" helm-repo/helm-sources/wordpress/Chart.yaml
+        TAG="${{ needs.versioning.outputs.semver_tag }}"
+        CLEAN_VERSION="${TAG/v/}"
+
+        sed -i "s/^version: .*/version: $TAG/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" helm-repo/helm-sources/wordpress/Chart.yaml
 
         sed -i "s|tag: \".*\"|tag: \"${{ needs.build.outputs.image_tag }}\"|" helm-repo/helm-sources/wordpress/values.yaml
 
@@ -94,7 +96,7 @@ jobs:
         cd helm-repo
         helm package helm-sources/wordpress -d helm-releases
         helm repo index --url "${{ vars.URL_HELM_REPO }}" --merge index.yaml .
-        
+
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git add .
@@ -114,7 +116,7 @@ jobs:
   update-argocd:
     runs-on: ubuntu-latest
     needs: update-helm
-    
+
     steps:
     - name: Checkout ArgoCD repository
       uses: actions/checkout@v4
@@ -125,13 +127,15 @@ jobs:
 
     - name: Update ArgoCD Application
       run: |
-        helm_version="${{ needs.versioning.outputs.semver_tag#v}}"
-        sed -i "s|version: .*|version: $helm_version|" applications/dev/wordpress-dev.yaml
+        TAG="${{ needs.versioning.outputs.semver_tag }}"
+        CLEAN_TAG="${TAG/v/}"
+
+        sed -i "s|version: .*|version: $CLEAN_TAG|" applications/dev/wordpress-dev.yaml
 
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         git add .
-        git commit -m "Auto-update: ArgoCD targets chart version ${target_version}"
+        git commit -m "Auto-update: ArgoCD targets chart version ${CLEAN_TAG}"
         git push
 
     - name: Slack Notification
@@ -143,3 +147,4 @@ jobs:
         SLACK_COLOR: ${{ job.status }}
         SLACK_MESSAGE: |
           ${{ job.status }}
+
