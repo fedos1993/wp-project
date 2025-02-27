@@ -1,0 +1,24 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - testing
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract latest tag from dev
+      run: |
+        git fetch --tags origin dev
+        DEV_COMMIT=$(git log -1 --pretty=%P | awk '{print $1}')
+        VERSION=$(git describe --tags $DEV_COMMIT_HASH --abbrev=0)
+          echo "Version: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
