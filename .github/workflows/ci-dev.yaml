@@ -3,7 +3,7 @@ name: Build and Deploy WordPress Docker Image
 on:
   push:
     branches:
-      - testing
+      - dev
 
 permissions:
   contents: write
