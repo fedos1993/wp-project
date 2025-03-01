@@ -86,7 +86,7 @@ jobs:
         sed -i "s/^version: .*/version: $TAG/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" helm-repo/helm-sources/wordpress/Chart.yaml
 
-        sed -i "s|tag: \".*\"|tag: \"${{ needs.build.outputs.image_tag }}\"|" helm-repo/helm-sources/wordpress/values.yaml
+        sed -i "s|tag: \".*\"|tag: \"${{ needs.build.outputs.semver_tag }}\"|" helm-repo/helm-sources/wordpress/values.yaml
 
     - name: Package and Push Chart
       run: |
@@ -99,6 +99,8 @@ jobs:
         git add .
         git commit -m "Auto-update: WordPress ${{ needs.versioning.outputs.semver_tag }}"
         git push
+
+        sleep 60
 
     - name: Slack Notification
       if: always()
