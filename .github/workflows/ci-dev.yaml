@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       semver_tag: ${{ steps.semver.outputs.new_tag }}
-      commit_sha: ${{ github.sha }}
 
     steps:
     - name: Checkout
@@ -85,7 +84,6 @@ jobs:
 
         sed -i "s/^version: .*/version: $CLEAN_VERSION/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" helm-repo/helm-sources/wordpress/Chart.yaml
-
         sed -i "s|tag: \".*\"|tag: \"$TAG\"|" helm-repo/helm-sources/wordpress/values.yaml
 
     - name: Package and Push Chart
