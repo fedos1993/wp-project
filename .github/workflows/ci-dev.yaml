@@ -83,10 +83,10 @@ jobs:
         TAG="${{ needs.versioning.outputs.semver_tag }}"
         CLEAN_VERSION="${TAG/v/}"
 
-        sed -i "s/^version: .*/version: $TAG/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i "s/^version: .*/version: $CLEAN_VERSION/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" helm-repo/helm-sources/wordpress/Chart.yaml
 
-        sed -i "s|tag: \".*\"|tag: \"${{ needs.build.outputs.semver_tag }}\"|" helm-repo/helm-sources/wordpress/values.yaml
+        sed -i "s|tag: \".*\"|tag: \"$TAG\"|" helm-repo/helm-sources/wordpress/values.yaml
 
     - name: Package and Push Chart
       run: |
