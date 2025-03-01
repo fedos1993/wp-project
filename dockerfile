@@ -5,7 +5,9 @@ FROM wordpress:6.7-php8.2-apache
 #    chmod +x /usr/local/bin/wp && \
 #    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY ./source/themes/astra /var/www/html/wp-content/themes/
+#COPY ./source/themes/astra /var/www/html/wp-content/themes/
+
+COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
