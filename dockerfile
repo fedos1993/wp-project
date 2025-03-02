@@ -9,10 +9,10 @@ COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
-COPY ./source/install_wp.sh /usr/local/bin/install_wp.sh
+COPY ./source/install_wp.sh /install_wp.sh
 
 RUN chmod +x /install_wp.sh
 
 EXPOSE 80
 
-ENTRYPOINT ["apache2-foreground", "&&", "install_wp.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "apache2-foreground && /install_wp.sh"]
