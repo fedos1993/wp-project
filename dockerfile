@@ -15,4 +15,4 @@ RUN chmod +x /install_wp.sh
 
 EXPOSE 80
 
-CMD ["/bin/bash", "-c", "docker-entrypoint.sh apache2-foreground && /install_wp.sh"]
+CMD ["/bin/bash", "-c", "docker-entrypoint.sh apache2-foreground & /install_wp.sh"]
