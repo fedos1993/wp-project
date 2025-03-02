@@ -9,10 +9,10 @@ COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
-COPY ./source/install_wp.sh /install_wp.sh
+COPY ./source/install_wp.sh /docker-entrypoint.d/install-wp
 
-RUN chmod +x /install_wp.sh
+RUN chmod +x /docker-entrypoint.d/install-wp
 
 EXPOSE 80
 
-CMD ["/bin/bash", "-c", "docker-entrypoint.sh && install_wp.sh apache2-foreground"]
+CMD ["apache2-foreground"]
