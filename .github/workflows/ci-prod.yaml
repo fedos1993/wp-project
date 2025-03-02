@@ -17,9 +17,9 @@ jobs:
 
     - name: Extract latest tag from dev
       run: |
-        git fetch --tags origin dev
-        DEV_COMMIT=$(git log -1 --pretty=%P | awk '{print $1}')
-        VERSION=$(git describe --tags $DEV_COMMIT --abbrev=0)
+        DEV_COMMIT="${{ github.event.pull_request.head.sha }}"
+        git fetch --tags origin
+        VERSION=$(git tag --points-at $DEV_COMMIT)
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Check Helm chart version
@@ -27,7 +27,7 @@ jobs:
         TARGET_VERSION="${{ env.VERSION }}"
         CLEAN_TAG="${TARGET_VERSION/v/}"
 
-        if ! curl -sL "${{ vars.URL_HELM_REPO }}"/index.yaml | grep -q "wordpress-$TARGET_VERSION\.tgz"; then
+        if ! curl -sL "${{ vars.URL_HELM_REPO }}"/index.yaml | grep -q "wordpress-$CLEAN_TAG\.tgz"; then
           echo "Chart not found"
           exit 1
         fi
