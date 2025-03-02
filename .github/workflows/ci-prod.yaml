@@ -18,7 +18,9 @@ jobs:
     - name: Extract latest tag from dev
       run: |
         DEV_COMMIT="${{ github.event.pull_request.head.sha }}"
+        echo "$DEV_COMMIT"
         git fetch --tags origin
+        echo "git fetch --tags origin"
         VERSION=$(git tag --points-at $DEV_COMMIT)
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
