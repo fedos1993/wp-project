@@ -9,9 +9,9 @@ COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
-COPY ./source/install_wp.sh /install-wp.sh
+COPY ./source/install_wp.sh /install_wp.sh
 
-RUN chmod +x /install-wp.sh
+RUN chmod +x /install_wp.sh
 
 EXPOSE 80
 
