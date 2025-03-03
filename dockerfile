@@ -5,9 +5,12 @@ RUN apt-get update && apt-get install -y wget less && \
     chmod +x /usr/local/bin/wp && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
+#COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
+COPY ./source/themes/neve /var/www/html/wp-content/themes/neve
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
+
+ENV WORDPRESS_THEME=neve
 
 COPY ./source/install_wp.sh /install_wp.sh
 
