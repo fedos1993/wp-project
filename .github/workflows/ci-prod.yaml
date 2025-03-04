@@ -1,0 +1,57 @@
+name: Deploy to Production
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  deploy-production:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract latest tag from dev
+      run: |
+        DEV_COMMIT="${{ github.event.pull_request.head.sha }}"
+        echo "$DEV_COMMIT"
+        git fetch --tags origin
+        echo "git fetch --tags origin"
+        VERSION=$(git tag --points-at $DEV_COMMIT)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Check Helm chart version
+      run: |
+        TARGET_VERSION="${{ env.VERSION }}"
+        CLEAN_TAG="${TARGET_VERSION/v/}"
+
+        if ! curl -sL "${{ vars.URL_HELM_REPO }}"/index.yaml | grep -q "wordpress-$CLEAN_TAG\.tgz"; then
+          echo "Chart not found"
+          exit 1
+        fi
+
+        echo "CLEAN_TAG=$CLEAN_TAG" >> $GITHUB_ENV
+
+    - name: Checkout ArgoCD repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ vars.USER_GITHUB }}/${{ vars.ARGOCD_REPO }}
+        token: ${{ secrets.TOKEN_GITHUB }}
+        path: argocd-repo
+
+    - name: Update ArgoCD Application
+      run: |
+
+        cd argocd-repo
+        sed -E -i "s|^( *targetRevision:).*|\1 $CLEAN_TAG|" applications/prod/wordpress-prod.yaml
+
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add .
+        git commit -m "Auto-update: ArgoCD targets chart version ${CLEAN_TAG}"
+        git push
