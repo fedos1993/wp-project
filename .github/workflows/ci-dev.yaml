@@ -1,0 +1,157 @@
+name: Build and Deploy WordPress Docker Image
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  versioning:
+    runs-on: ubuntu-latest
+    outputs:
+      semver_tag: ${{ steps.semver.outputs.new_tag }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate SemVer Tag
+      id: semver
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag_prefix: v
+        release_branches: dev
+
+  build:
+    runs-on: ubuntu-latest
+    needs: versioning
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Docker linter
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: ./Dockerfile
+
+    - name: Docker Login
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        tags: |
+          ${{ vars.DOCKER_USERNAME }}/wordpress:${{ needs.versioning.outputs.semver_tag }}
+        push: true
+        file: ./Dockerfile
+
+    - name: Slack Notification
+      if: always()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: "Image build result for ${{ github.repository }}"
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_MESSAGE: |
+          Result is ${{ job.status }}
+          Commit message: ${{ github.event.head_commit.message }}
+
+  update-helm:
+    runs-on: ubuntu-latest
+    needs: [versioning, build]
+
+    steps:
+    - name: Checkout Helm Repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ vars.USER_GITHUB }}/${{ vars.HELM_REPO}}
+        token: ${{ secrets.TOKEN_GITHUB }}
+        path: helm-repo
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4.3.0
+
+    - name: Update Chart Versions
+      run: |
+        TAG="${{ needs.versioning.outputs.semver_tag }}"
+        CLEAN_VERSION="${TAG/v/}"
+
+        sed -i "s/^version: .*/version: $CLEAN_VERSION/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" helm-repo/helm-sources/wordpress/Chart.yaml
+        sed -i "s|tag: \".*\"|tag: \"$TAG\"|" helm-repo/helm-sources/wordpress/values.yaml
+
+    - name: Lint Helm Chart
+      run: |
+        helm lint ./helm-repo/helm-sources/wordpress
+
+    - name: Package and Push Chart
+      run: |
+        cd helm-repo
+        helm package helm-sources/wordpress -d helm-releases
+        helm repo index --url "${{ vars.URL_HELM_REPO }}" --merge index.yaml .
+
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add .
+        git commit -m "Auto-update: WordPress ${{ needs.versioning.outputs.semver_tag }}"
+        git push
+
+        sleep 60
+
+    - name: Slack Notification
+      if: always()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: "Update HELM repository ${{ github.ref_name }}"
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_MESSAGE: |
+          ${{ job.status }}
+
+  update-argocd:
+    runs-on: ubuntu-latest
+    needs: [versioning, update-helm]
+
+    steps:
+    - name: Checkout ArgoCD repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ vars.USER_GITHUB }}/${{ vars.ARGOCD_REPO }}
+        token: ${{ secrets.TOKEN_GITHUB }}
+        path: argocd-repo
+
+    - name: Update ArgoCD Application
+      run: |
+        TAG="${{ needs.versioning.outputs.semver_tag }}"
+        CLEAN_TAG="${TAG/v/}"
+        cd argocd-repo
+        sed -E -i "s|^( *targetRevision:).*|\1 $CLEAN_TAG|" applications/dev/wordpress-dev.yaml
+
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add .
+        git commit -m "Auto-update: ArgoCD targets chart version ${CLEAN_TAG}"
+        git push
+
+    - name: Slack Notification
+      if: always()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_TITLE: "Update ArgoCD application ${{ github.ref_name }}"
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_MESSAGE: |
+          ${{ job.status }}
+
