@@ -36,6 +36,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Docker linter
+      uses: luke142367/Docker-Lint-Action@v1.1.1
+      with:
+        target: ./Dockerfile
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Docker Login
       uses: docker/login-action@v3
       with:
@@ -49,7 +56,7 @@ jobs:
         tags: |
           ${{ vars.DOCKER_USERNAME }}/wordpress:${{ needs.versioning.outputs.semver_tag }}
         push: true
-        file: ./dockerfile
+        file: ./Dockerfile
 
     - name: Slack Notification
       if: always()
@@ -85,6 +92,10 @@ jobs:
         sed -i "s/^version: .*/version: $CLEAN_VERSION/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: \"$TAG\"/" helm-repo/helm-sources/wordpress/Chart.yaml
         sed -i "s|tag: \".*\"|tag: \"$TAG\"|" helm-repo/helm-sources/wordpress/values.yaml
+
+    - name: Lint Helm Chart
+      run: |
+        helm lint ./helm-repo/helm-sources/wordpress
 
     - name: Package and Push Chart
       run: |
