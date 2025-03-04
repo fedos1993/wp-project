@@ -7,11 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 #COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
-COPY ./source/themes/neve /var/www/html/wp-content/themes/neve
+#COPY ./source/themes/neve /var/www/html/wp-content/themes/neve
+COPY ./source/themes/darknews /var/www/html/wp-content/themes/darknews
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
-ENV WORDPRESS_THEME=neve
+ENV WORDPRESS_THEME=darknews
 
 COPY ./source/install_wp.sh /install_wp.sh
 
