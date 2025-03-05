@@ -37,6 +37,11 @@ jobs:
 
         echo "CLEAN_TAG=$CLEAN_TAG" >> $GITHUB_ENV
 
+    - name: Check Docker image
+      run: |
+        docker pull ${{ vars.DOCKER_USERNAME }}/wordpress:$CLEAN_TAG || exit 1
+        echo "Docker image found"
+
     - name: Checkout ArgoCD repository
       uses: actions/checkout@v4
       with:
