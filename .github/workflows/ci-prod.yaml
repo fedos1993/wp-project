@@ -39,7 +39,7 @@ jobs:
 
     - name: Check Docker image
       run: |
-        docker pull "${{ vars.DOCKER_USERNAME }}"/wordpress:"${{ env.VERSION }}" || exit 1
+        docker pull ${{ vars.DOCKER_USERNAME }}/wordpress:${{ env.VERSION }} || exit 1
         echo "Docker image found"
 
     - name: Checkout ArgoCD repository
