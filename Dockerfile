@@ -8,11 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 #COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 #COPY ./source/themes/neve /var/www/html/wp-content/themes/neve
-COPY ./source/themes/ashe /var/www/html/wp-content/themes/ashe
+COPY ./source/themes/astra /var/www/html/wp-content/themes/astra
 
 RUN chown -R www-data:www-data /var/www/html/wp-content/themes
 
-ENV WORDPRESS_THEME=ashe
+ENV WORDPRESS_THEME=astra
 
 COPY ./source/install_wp.sh /install_wp.sh
 
